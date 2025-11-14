@@ -30,11 +30,5 @@
         </plugins>
     </build>
 
-    <dependencies>
-        <dependency>
-            <groupId>io.gitlab.autumnmeowmeow</groupId>
-            <artifactId>jexer</artifactId>
-            <version>1.7.0</version>
-        </dependency>
-    </dependencies>
+    <dependencies/>
 </project>
