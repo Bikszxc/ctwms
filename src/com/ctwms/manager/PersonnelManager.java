@@ -49,4 +49,8 @@ public class PersonnelManager {
     public Personnel removeById(String id) {
         return personnelList.removeById(id);
     }
+
+    public void replaceAll(List<Personnel> orderedPersonnel) {
+        personnelList.replaceAll(orderedPersonnel);
+    }
 }

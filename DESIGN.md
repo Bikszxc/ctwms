@@ -61,3 +61,6 @@
 - Navigation aids
   - Prompt helper `waitForEnter()` pauses after large outputs so the user can read before returning.
   - Error and validation messages are emphasized in yellow/red text to stand out during data entry.
+- Keyboard shortcuts
+  - Global combos (typed as `CTRL+…`) instantly trigger common workflows (add/remove/search personnel, services, tasks, undo, summary).
+  - A dedicated “Keyboard Shortcuts” screen lists all combos, and menus accept shortcuts anywhere you’d normally enter a choice.

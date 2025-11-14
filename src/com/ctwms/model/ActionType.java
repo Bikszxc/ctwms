@@ -6,6 +6,7 @@ package com.ctwms.model;
 public enum ActionType {
     ADD_PERSONNEL,
     REMOVE_PERSONNEL,
+    SORT_PERSONNEL,
     ADD_TASK,
     SERVE_TASK,
     ADD_SERVICE,

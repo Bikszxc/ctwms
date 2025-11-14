@@ -12,7 +12,9 @@ import com.ctwms.model.Task;
 import com.ctwms.model.TaskPriority;
 
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Scanner;
 import java.util.UUID;
 
@@ -25,6 +27,7 @@ public class CTWMSApplication {
     private final ServiceCatalog serviceCatalog = new ServiceCatalog();
     private final TaskManager taskManager = new TaskManager();
     private final UndoService undoService = new UndoService();
+    private final List<Shortcut> shortcuts = new ArrayList<>();
 
     private static final int CONSOLE_WIDTH = 70;
     private static final String PRIMARY_DIVIDER = "=".repeat(CONSOLE_WIDTH);
@@ -44,6 +47,10 @@ public class CTWMSApplication {
 
     private int taskSequence = 1;
 
+    public CTWMSApplication() {
+        registerShortcuts();
+    }
+
     public static void main(String[] args) {
         new CTWMSApplication().run();
     }
@@ -61,13 +68,14 @@ public class CTWMSApplication {
             clearScreen();
             printHero();
             printMainMenu();
-            int choice = readMenuChoice("Select an option: ", 0, 5);
+            int choice = readMenuChoice("Select an option: ", 0, 6);
             switch (choice) {
                 case 1 -> managePersonnelMenu();
                 case 2 -> manageServicesMenu();
                 case 3 -> manageTasksMenu();
                 case 4 -> undoMenu();
                 case 5 -> showSummary();
+                case 6 -> showShortcutReference();
                 case 0 -> exit = true;
                 default -> printWarning("Invalid option. Please try again.");
             }
@@ -83,6 +91,7 @@ public class CTWMSApplication {
                 "3) Manage Campus Task Requests (Queue)",
                 "4) Undo System (Stack)",
                 "5) View System Summary / Reports",
+                "6) Keyboard Shortcuts Reference",
                 "0) Exit");
         System.out.println(style(DIM, centerText("LinkedList · ArrayList · Queue · Stack", PRIMARY_DIVIDER.length())));
         System.out.println();
@@ -106,7 +115,9 @@ public class CTWMSApplication {
                 case 2 -> removePersonnel();
                 case 3 -> searchPersonnel();
                 case 4 -> {
-                    personnelManager.sortByName();
+                    if (!sortPersonnelWithUndo()) {
+                        break;
+                    }
                     printInfo("Personnel list sorted alphabetically.");
                 }
                 case 5 -> displayPersonnel();
@@ -161,6 +172,17 @@ public class CTWMSApplication {
         } else {
             printWarning("No personnel located with that name.");
         }
+    }
+
+    private boolean sortPersonnelWithUndo() {
+        if (personnelManager.count() < 2) {
+            printWarning("Need at least two personnel records to sort.");
+            return false;
+        }
+        List<Personnel> beforeOrder = personnelManager.listAll();
+        personnelManager.sortByName();
+        undoService.record(Action.personnelOrderAction(beforeOrder, "Sorted personnel alphabetically."));
+        return true;
     }
 
     private void displayPersonnel() {
@@ -459,11 +481,19 @@ public class CTWMSApplication {
 
     private int readMenuChoice(String prompt, int min, int max) {
         while (true) {
-            int value = readInt(prompt);
-            if (value < min || value > max) {
-                printWarning(String.format("Please choose a number between %d and %d.", min, max));
-            } else {
-                return value;
+            String input = readMenuInput(prompt);
+            if (input == null) {
+                continue;
+            }
+            try {
+                int value = Integer.parseInt(input);
+                if (value < min || value > max) {
+                    printWarning(String.format("Please choose a number between %d and %d.", min, max));
+                } else {
+                    return value;
+                }
+            } catch (NumberFormatException e) {
+                printWarning("Please enter a valid number or shortcut.");
             }
         }
     }
@@ -478,6 +508,18 @@ public class CTWMSApplication {
                 printWarning("Please enter a valid integer.");
             }
         }
+    }
+
+    private String readMenuInput(String prompt) {
+        System.out.print(style(FG_WHITE, prompt));
+        String input = scanner.nextLine().trim();
+        if (input.isEmpty()) {
+            return input;
+        }
+        if (handleShortcutInput(input)) {
+            return null;
+        }
+        return input;
     }
 
     private String readLine(String prompt) {
@@ -558,6 +600,37 @@ public class CTWMSApplication {
         scanner.nextLine();
     }
 
+    private void registerShortcuts() {
+        shortcuts.add(new Shortcut("CTRL+Z", "Undo last action", this::undoLastAction));
+        shortcuts.add(new Shortcut("CTRL+P", "Add personnel", this::addPersonnel));
+        shortcuts.add(new Shortcut("CTRL+SHIFT+P", "Remove personnel by name", this::removePersonnel));
+        shortcuts.add(new Shortcut("CTRL+F", "Search personnel", this::searchPersonnel));
+        shortcuts.add(new Shortcut("CTRL+SHIFT+F", "Display personnel directory", this::displayPersonnel));
+        shortcuts.add(new Shortcut("CTRL+S", "Add service", this::addService));
+        shortcuts.add(new Shortcut("CTRL+SHIFT+S", "Remove service", this::removeService));
+        shortcuts.add(new Shortcut("CTRL+ALT+S", "Search services", this::searchService));
+        shortcuts.add(new Shortcut("CTRL+T", "Add task request", this::addTask));
+        shortcuts.add(new Shortcut("CTRL+SHIFT+T", "Serve next task", this::serveTask));
+        shortcuts.add(new Shortcut("CTRL+ALT+T", "Display pending tasks", this::displayTasks));
+        shortcuts.add(new Shortcut("CTRL+U", "Show undo history", this::showUndoHistory));
+        shortcuts.add(new Shortcut("CTRL+M", "View system summary", this::showSummary));
+        shortcuts.add(new Shortcut("CTRL+H", "Keyboard shortcuts reference", this::showShortcutReference));
+    }
+
+    private void showShortcutReference() {
+        clearScreen();
+        printBanner("Keyboard Shortcuts");
+        System.out.println(style(BOLD + FG_WHITE, String.format("%-20s %s", "Shortcut", "Action")));
+        System.out.println(style(FG_BLUE, SECONDARY_DIVIDER));
+        for (Shortcut shortcut : shortcuts) {
+            System.out.printf("%-20s %s%n",
+                    style(BOLD + FG_MAGENTA, shortcut.combo()),
+                    style(FG_WHITE, shortcut.description()));
+        }
+        System.out.println(style(FG_BLUE, SECONDARY_DIVIDER));
+        waitForEnter("Press Enter to continue...");
+    }
+
     private String highlightOption(String option) {
         int idx = option.indexOf(')');
         if (idx > 0) {
@@ -566,6 +639,32 @@ public class CTWMSApplication {
             return highlightNumber(number) + " " + style(FG_WHITE, description);
         }
         return style(FG_WHITE, option);
+    }
+
+    private boolean handleShortcutInput(String rawInput) {
+        String normalized = normalizeShortcutKey(rawInput);
+        if (normalized.isEmpty()) {
+            return false;
+        }
+        for (Shortcut shortcut : shortcuts) {
+            if (shortcut.combo().equals(normalized)) {
+                System.out.println(style(FG_MAGENTA, "\n⚡ " + shortcut.combo() + " → " + shortcut.description()));
+                shortcut.action().run();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String normalizeShortcutKey(String rawInput) {
+        if (rawInput == null) {
+            return "";
+        }
+        String normalized = rawInput.trim().toUpperCase(Locale.ROOT)
+                .replace("CONTROL", "CTRL")
+                .replaceAll("\\s+", "");
+        normalized = normalized.replace('-', '+');
+        return normalized;
     }
 
     private String highlightNumber(String text) {
@@ -610,5 +709,8 @@ public class CTWMSApplication {
         String left = " ".repeat(padding);
         String right = " ".repeat(width - text.length() - padding);
         return left + text + right;
+    }
+
+    private record Shortcut(String combo, String description, Runnable action) {
     }
 }

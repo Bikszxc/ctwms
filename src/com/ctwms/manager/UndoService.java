@@ -34,6 +34,7 @@ public class UndoService {
             case ADD_SERVICE -> revertAddService(serviceCatalog, action.getServiceAfter());
             case REMOVE_SERVICE -> revertRemoveService(serviceCatalog, action.getServiceBefore(), action.getPositionIndex());
             case EDIT_SERVICE -> revertEditService(serviceCatalog, action.getServiceBefore(), action.getServiceAfter());
+            case SORT_PERSONNEL -> revertPersonnelOrder(personnelManager, action.getPersonnelOrderSnapshot());
             default -> {
                 return false;
             }
@@ -65,6 +66,13 @@ public class UndoService {
             return;
         }
         manager.reinsert(personnel, position);
+    }
+
+    private void revertPersonnelOrder(PersonnelManager manager, List<Personnel> orderedPersonnel) {
+        if (orderedPersonnel == null) {
+            return;
+        }
+        manager.replaceAll(orderedPersonnel);
     }
 
     private void revertAddTask(TaskManager manager, Task task) {

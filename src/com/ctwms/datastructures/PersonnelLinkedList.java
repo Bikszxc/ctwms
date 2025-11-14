@@ -241,4 +241,18 @@ public class PersonnelLinkedList {
     public void reinsert(Personnel personnel, int index) {
         insertAtPosition(personnel, index);
     }
+
+    /**
+     * Replaces the entire list contents with the provided ordering.
+     */
+    public void replaceAll(List<Personnel> orderedPersonnel) {
+        head = null;
+        size = 0;
+        if (orderedPersonnel == null || orderedPersonnel.isEmpty()) {
+            return;
+        }
+        for (Personnel personnel : orderedPersonnel) {
+            insertAtPosition(personnel, size);
+        }
+    }
 }
