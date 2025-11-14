@@ -94,6 +94,7 @@ public class CTWMSApplication {
                 "6) Keyboard Shortcuts Reference",
                 "0) Exit");
         System.out.println(style(DIM, centerText("LinkedList · ArrayList · Queue · Stack", PRIMARY_DIVIDER.length())));
+        System.out.println(style(DIM, centerText("Tip: type commands like :shortcuts or :undo at any prompt.", PRIMARY_DIVIDER.length())));
         System.out.println();
     }
 
@@ -601,30 +602,32 @@ public class CTWMSApplication {
     }
 
     private void registerShortcuts() {
-        shortcuts.add(new Shortcut("CTRL+Z", "Undo last action", this::undoLastAction));
-        shortcuts.add(new Shortcut("CTRL+P", "Add personnel", this::addPersonnel));
-        shortcuts.add(new Shortcut("CTRL+SHIFT+P", "Remove personnel by name", this::removePersonnel));
-        shortcuts.add(new Shortcut("CTRL+F", "Search personnel", this::searchPersonnel));
-        shortcuts.add(new Shortcut("CTRL+SHIFT+F", "Display personnel directory", this::displayPersonnel));
-        shortcuts.add(new Shortcut("CTRL+S", "Add service", this::addService));
-        shortcuts.add(new Shortcut("CTRL+SHIFT+S", "Remove service", this::removeService));
-        shortcuts.add(new Shortcut("CTRL+ALT+S", "Search services", this::searchService));
-        shortcuts.add(new Shortcut("CTRL+T", "Add task request", this::addTask));
-        shortcuts.add(new Shortcut("CTRL+SHIFT+T", "Serve next task", this::serveTask));
-        shortcuts.add(new Shortcut("CTRL+ALT+T", "Display pending tasks", this::displayTasks));
-        shortcuts.add(new Shortcut("CTRL+U", "Show undo history", this::showUndoHistory));
-        shortcuts.add(new Shortcut("CTRL+M", "View system summary", this::showSummary));
-        shortcuts.add(new Shortcut("CTRL+H", "Keyboard shortcuts reference", this::showShortcutReference));
+        shortcuts.add(new Shortcut(":undo", "Undo last action", this::undoLastAction));
+        shortcuts.add(new Shortcut(":add-personnel", "Add personnel", this::addPersonnel));
+        shortcuts.add(new Shortcut(":remove-personnel", "Remove personnel by name", this::removePersonnel));
+        shortcuts.add(new Shortcut(":search-personnel", "Search personnel", this::searchPersonnel));
+        shortcuts.add(new Shortcut(":list-personnel", "Display personnel directory", this::displayPersonnel));
+        shortcuts.add(new Shortcut(":add-service", "Add service", this::addService));
+        shortcuts.add(new Shortcut(":remove-service", "Remove service", this::removeService));
+        shortcuts.add(new Shortcut(":search-service", "Search services", this::searchService));
+        shortcuts.add(new Shortcut(":add-task", "Add task request", this::addTask));
+        shortcuts.add(new Shortcut(":serve-task", "Serve next task", this::serveTask));
+        shortcuts.add(new Shortcut(":list-tasks", "Display pending tasks", this::displayTasks));
+        shortcuts.add(new Shortcut(":undo-history", "Show undo history", this::showUndoHistory));
+        shortcuts.add(new Shortcut(":summary", "View system summary", this::showSummary));
+        shortcuts.add(new Shortcut(":shortcuts", "Keyboard shortcuts reference", this::showShortcutReference));
     }
 
     private void showShortcutReference() {
         clearScreen();
-        printBanner("Keyboard Shortcuts");
-        System.out.println(style(BOLD + FG_WHITE, String.format("%-20s %s", "Shortcut", "Action")));
+        printBanner("Keyboard Commands");
+        System.out.println(style(DIM + FG_WHITE, "Type these at any prompt (e.g., :add-personnel)"));
+        System.out.println();
+        System.out.println(style(BOLD + FG_WHITE, String.format("%-22s %s", "Command", "Action")));
         System.out.println(style(FG_BLUE, SECONDARY_DIVIDER));
         for (Shortcut shortcut : shortcuts) {
-            System.out.printf("%-20s %s%n",
-                    style(BOLD + FG_MAGENTA, shortcut.combo()),
+            System.out.printf("%-22s %s%n",
+                    style(BOLD + FG_MAGENTA, shortcut.command()),
                     style(FG_WHITE, shortcut.description()));
         }
         System.out.println(style(FG_BLUE, SECONDARY_DIVIDER));
@@ -642,29 +645,30 @@ public class CTWMSApplication {
     }
 
     private boolean handleShortcutInput(String rawInput) {
-        String normalized = normalizeShortcutKey(rawInput);
-        if (normalized.isEmpty()) {
+        String normalized = normalizeCommand(rawInput);
+        if (normalized == null) {
             return false;
         }
         for (Shortcut shortcut : shortcuts) {
-            if (shortcut.combo().equals(normalized)) {
-                System.out.println(style(FG_MAGENTA, "\n⚡ " + shortcut.combo() + " → " + shortcut.description()));
+            if (shortcut.command().equals(normalized)) {
+                System.out.println(style(FG_MAGENTA, "\n⚡ " + shortcut.command() + " → " + shortcut.description()));
                 shortcut.action().run();
                 return true;
             }
         }
-        return false;
+        printWarning("Unknown command. Type :shortcuts to view options.");
+        return true;
     }
 
-    private String normalizeShortcutKey(String rawInput) {
+    private String normalizeCommand(String rawInput) {
         if (rawInput == null) {
-            return "";
+            return null;
         }
-        String normalized = rawInput.trim().toUpperCase(Locale.ROOT)
-                .replace("CONTROL", "CTRL")
-                .replaceAll("\\s+", "");
-        normalized = normalized.replace('-', '+');
-        return normalized;
+        String trimmed = rawInput.trim();
+        if (!trimmed.startsWith(":")) {
+            return null;
+        }
+        return trimmed.toLowerCase(Locale.ROOT);
     }
 
     private String highlightNumber(String text) {
@@ -711,6 +715,6 @@ public class CTWMSApplication {
         return left + text + right;
     }
 
-    private record Shortcut(String combo, String description, Runnable action) {
+    private record Shortcut(String command, String description, Runnable action) {
     }
 }
