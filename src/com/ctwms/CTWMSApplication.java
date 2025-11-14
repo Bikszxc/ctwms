@@ -11,6 +11,7 @@ import com.ctwms.model.Service;
 import com.ctwms.model.Task;
 import com.ctwms.model.TaskPriority;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Scanner;
 import java.util.UUID;
@@ -25,6 +26,11 @@ public class CTWMSApplication {
     private final TaskManager taskManager = new TaskManager();
     private final UndoService undoService = new UndoService();
 
+    private static final int CONSOLE_WIDTH = 70;
+    private static final String PRIMARY_DIVIDER = "=".repeat(CONSOLE_WIDTH);
+    private static final String SECONDARY_DIVIDER = "-".repeat(CONSOLE_WIDTH);
+    private static final DateTimeFormatter TASK_TIME_FORMATTER = DateTimeFormatter.ofPattern("MM-dd HH:mm");
+
     private int taskSequence = 1;
 
     public static void main(String[] args) {
@@ -35,7 +41,7 @@ public class CTWMSApplication {
         boolean exit = false;
         while (!exit) {
             printMainMenu();
-            int choice = readInt("Select an option: ");
+            int choice = readMenuChoice("Select an option: ", 0, 5);
             switch (choice) {
                 case 1 -> managePersonnelMenu();
                 case 2 -> manageServicesMenu();
@@ -43,52 +49,53 @@ public class CTWMSApplication {
                 case 4 -> undoMenu();
                 case 5 -> showSummary();
                 case 0 -> exit = true;
-                default -> System.out.println("Invalid option. Please try again.");
+                default -> printWarning("Invalid option. Please try again.");
             }
         }
-        System.out.println("Thank you for using CTWMS. Goodbye!");
+        printBanner("Session Closed");
+        printInfo("Thank you for using CTWMS. Goodbye!");
     }
 
     private void printMainMenu() {
-        System.out.println("\n=== Campus Task Workflow Management System ===");
-        System.out.println("1. Manage Campus Personnel (Linked List)");
-        System.out.println("2. Manage Campus Services Catalog (ArrayList)");
-        System.out.println("3. Manage Campus Task Requests (Queue)");
-        System.out.println("4. Undo System (Stack)");
-        System.out.println("5. View System Summary / Reports");
-        System.out.println("0. Exit");
+        printMenu("Campus Task Workflow Management System",
+                "1) Manage Campus Personnel (Linked List)",
+                "2) Manage Campus Services Catalog (ArrayList)",
+                "3) Manage Campus Task Requests (Queue)",
+                "4) Undo System (Stack)",
+                "5) View System Summary / Reports",
+                "0) Exit");
     }
 
     private void managePersonnelMenu() {
         boolean back = false;
         while (!back) {
-            System.out.println("\n--- Personnel Management ---");
-            System.out.println("1. Add Personnel");
-            System.out.println("2. Remove Personnel by Name");
-            System.out.println("3. Search Personnel by Name");
-            System.out.println("4. Sort Personnel Alphabetically");
-            System.out.println("5. Display All Personnel");
-            System.out.println("6. Show Total Personnel Count");
-            System.out.println("0. Back to Main Menu");
-            int choice = readInt("Choose an option: ");
+            printMenu("Personnel Management",
+                    "1) Add Personnel",
+                    "2) Remove Personnel by Name",
+                    "3) Search Personnel by Name",
+                    "4) Sort Personnel Alphabetically",
+                    "5) Display All Personnel",
+                    "6) Show Total Personnel Count",
+                    "0) Back to Main Menu");
+            int choice = readMenuChoice("Choose an option: ", 0, 6);
             switch (choice) {
                 case 1 -> addPersonnel();
                 case 2 -> removePersonnel();
                 case 3 -> searchPersonnel();
                 case 4 -> {
                     personnelManager.sortByName();
-                    System.out.println("Personnel list sorted alphabetically.");
+                    printInfo("Personnel list sorted alphabetically.");
                 }
                 case 5 -> displayPersonnel();
-                case 6 -> System.out.printf("Total registered personnel: %d%n", personnelManager.count());
+                case 6 -> printInfo(String.format("Total registered personnel: %d", personnelManager.count()));
                 case 0 -> back = true;
-                default -> System.out.println("Invalid choice. Try again.");
+                default -> printWarning("Invalid choice. Try again.");
             }
         }
     }
 
     private void addPersonnel() {
-        System.out.println("\nEnter personnel details.");
+        printSubHeading("Personnel Details");
         String id = readLine("ID (leave blank to auto-generate): ");
         if (id.isBlank()) {
             id = "PER-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
@@ -104,12 +111,12 @@ public class CTWMSApplication {
         personnelManager.addPersonnel(personnel, position);
         undoService.record(Action.personnelAction(ActionType.ADD_PERSONNEL, personnel,
                 position, "Added personnel " + name));
-        System.out.println("Personnel added successfully.");
+        printSuccess("Personnel added successfully.");
     }
 
     private void removePersonnel() {
         if (personnelManager.count() == 0) {
-            System.out.println("No personnel to remove.");
+            printWarning("No personnel to remove.");
             return;
         }
         String name = readLine("Enter the exact name to remove: ");
@@ -117,9 +124,9 @@ public class CTWMSApplication {
         if (result.isRemoved()) {
             undoService.record(Action.personnelAction(ActionType.REMOVE_PERSONNEL,
                     result.getRemovedPersonnel(), result.getIndex(), "Removed personnel " + name));
-            System.out.println("Personnel removed.");
+            printSuccess("Personnel removed.");
         } else {
-            System.out.println("Personnel not found.");
+            printWarning("Personnel not found.");
         }
     }
 
@@ -127,36 +134,45 @@ public class CTWMSApplication {
         String name = readLine("Enter name to search: ");
         Personnel found = personnelManager.findByName(name);
         if (found != null) {
-            System.out.println("Record found: " + found);
+            printInfo("Record found: " + found);
         } else {
-            System.out.println("No personnel located with that name.");
+            printWarning("No personnel located with that name.");
         }
     }
 
     private void displayPersonnel() {
         List<Personnel> personnel = personnelManager.listAll();
         if (personnel.isEmpty()) {
-            System.out.println("No personnel registered yet.");
+            printWarning("No personnel registered yet.");
             return;
         }
-        System.out.println("\n-- Personnel List --");
+        printSubHeading(String.format("Personnel Directory (%d)", personnel.size()));
+        System.out.printf("%-4s %-22s %-18s %-16s %-25s%n", "#", "Name", "Role", "Department", "Email");
+        System.out.println(SECONDARY_DIVIDER);
         for (int i = 0; i < personnel.size(); i++) {
-            System.out.printf("%d. %s%n", i + 1, personnel.get(i));
+            Personnel person = personnel.get(i);
+            System.out.printf("%-4d %-22s %-18s %-16s %-25s%n",
+                    i + 1,
+                    truncate(person.getName(), 22),
+                    truncate(person.getRole(), 18),
+                    truncate(person.getDepartment(), 16),
+                    truncate(person.getEmail(), 25));
         }
+        System.out.println(SECONDARY_DIVIDER);
     }
 
     private void manageServicesMenu() {
         boolean back = false;
         while (!back) {
-            System.out.println("\n--- Service Catalog ---");
-            System.out.println("1. Add Service");
-            System.out.println("2. Upgrade (Edit) Service");
-            System.out.println("3. Exclude (Remove) Service");
-            System.out.println("4. Search Service");
-            System.out.println("5. Sort Services Alphabetically");
-            System.out.println("6. Display All Services");
-            System.out.println("0. Back to Main Menu");
-            int choice = readInt("Choose an option: ");
+            printMenu("Service Catalog",
+                    "1) Add Service",
+                    "2) Upgrade (Edit) Service",
+                    "3) Exclude (Remove) Service",
+                    "4) Search Service",
+                    "5) Sort Services Alphabetically",
+                    "6) Display All Services",
+                    "0) Back to Main Menu");
+            int choice = readMenuChoice("Choose an option: ", 0, 6);
             switch (choice) {
                 case 1 -> addService();
                 case 2 -> editService();
@@ -164,17 +180,17 @@ public class CTWMSApplication {
                 case 4 -> searchService();
                 case 5 -> {
                     serviceCatalog.sortAlphabetically();
-                    System.out.println("Services sorted alphabetically.");
+                    printInfo("Services sorted alphabetically.");
                 }
                 case 6 -> displayServices(serviceCatalog.listAll());
                 case 0 -> back = true;
-                default -> System.out.println("Invalid option. Try again.");
+                default -> printWarning("Invalid option. Try again.");
             }
         }
     }
 
     private void addService() {
-        System.out.println("\nEnter new service details.");
+        printSubHeading("New Service Details");
         String name = readLine("Service Name: ");
         String description = readLine("Description: ");
         String category = readLine("Category: ");
@@ -183,18 +199,18 @@ public class CTWMSApplication {
         serviceCatalog.addService(service);
         undoService.record(Action.serviceAction(ActionType.ADD_SERVICE, null, service,
                 serviceCatalog.count() - 1, "Added service " + name));
-        System.out.println("Service added to catalog.");
+        printSuccess("Service added to catalog.");
     }
 
     private void editService() {
         if (serviceCatalog.count() == 0) {
-            System.out.println("No services available to edit.");
+            printWarning("No services available to edit.");
             return;
         }
         String name = readLine("Enter the current service name to edit: ");
         Service existing = serviceCatalog.findByName(name);
         if (existing == null) {
-            System.out.println("Service not found.");
+            printWarning("Service not found.");
             return;
         }
         Service before = existing.clone();
@@ -219,12 +235,12 @@ public class CTWMSApplication {
         serviceCatalog.replaceService(after.getName(), after);
         undoService.record(Action.serviceAction(ActionType.EDIT_SERVICE, before, after, -1,
                 "Edited service " + before.getName()));
-        System.out.println("Service updated.");
+        printSuccess("Service updated.");
     }
 
     private void removeService() {
         if (serviceCatalog.count() == 0) {
-            System.out.println("No services to remove.");
+            printWarning("No services to remove.");
             return;
         }
         String name = readLine("Enter the service name to remove: ");
@@ -233,9 +249,9 @@ public class CTWMSApplication {
         if (removed != null) {
             undoService.record(Action.serviceAction(ActionType.REMOVE_SERVICE, removed, null,
                     index, "Removed service " + name));
-            System.out.println("Service removed from catalog.");
+            printSuccess("Service removed from catalog.");
         } else {
-            System.out.println("Service not located.");
+            printWarning("Service not located.");
         }
     }
 
@@ -243,7 +259,7 @@ public class CTWMSApplication {
         String keyword = readLine("Enter name or keyword: ");
         List<Service> matches = serviceCatalog.search(keyword);
         if (matches.isEmpty()) {
-            System.out.println("No services match your search.");
+            printWarning("No services match your search.");
         } else {
             displayServices(matches);
         }
@@ -251,38 +267,47 @@ public class CTWMSApplication {
 
     private void displayServices(List<Service> services) {
         if (services.isEmpty()) {
-            System.out.println("Service catalog is empty.");
+            printWarning("Service catalog is empty.");
             return;
         }
-        System.out.println("\n-- Services --");
+        printSubHeading(String.format("Service Catalog (%d)", services.size()));
+        System.out.printf("%-4s %-22s %-16s %-10s %-30s%n", "#", "Name", "Category", "Status", "Description");
+        System.out.println(SECONDARY_DIVIDER);
         for (int i = 0; i < services.size(); i++) {
-            System.out.printf("%d. %s%n", i + 1, services.get(i));
+            Service service = services.get(i);
+            System.out.printf("%-4d %-22s %-16s %-10s %-30s%n",
+                    i + 1,
+                    truncate(service.getName(), 22),
+                    truncate(service.getCategory(), 16),
+                    service.getStatusLabel(),
+                    truncate(service.getDescription(), 30));
         }
+        System.out.println(SECONDARY_DIVIDER);
     }
 
     private void manageTasksMenu() {
         boolean back = false;
         while (!back) {
-            System.out.println("\n--- Task Request Queue ---");
-            System.out.println("1. Add Task Request");
-            System.out.println("2. View Next Task");
-            System.out.println("3. Serve Next Task");
-            System.out.println("4. Display Pending Tasks");
-            System.out.println("0. Back to Main Menu");
-            int choice = readInt("Choose an option: ");
+            printMenu("Task Request Queue",
+                    "1) Add Task Request",
+                    "2) View Next Task",
+                    "3) Serve Next Task",
+                    "4) Display Pending Tasks",
+                    "0) Back to Main Menu");
+            int choice = readMenuChoice("Choose an option: ", 0, 4);
             switch (choice) {
                 case 1 -> addTask();
                 case 2 -> peekTask();
                 case 3 -> serveTask();
                 case 4 -> displayTasks();
                 case 0 -> back = true;
-                default -> System.out.println("Invalid menu option.");
+                default -> printWarning("Invalid menu option.");
             }
         }
     }
 
     private void addTask() {
-        System.out.println("\nEnter task request details.");
+        printSubHeading("Task Request Details");
         String requestor = readLine("Requestor Name: ");
         String description = readLine("Task Description: ");
         String priorityInput = readLine("Priority (HIGH/MEDIUM/LOW): ");
@@ -291,24 +316,24 @@ public class CTWMSApplication {
         Task task = new Task(taskId, requestor, description, priority);
         taskManager.addTask(task);
         undoService.record(Action.taskAction(ActionType.ADD_TASK, task, "Added task " + taskId));
-        System.out.println("Task enqueued with ID " + taskId);
+        printSuccess("Task enqueued with ID " + taskId);
     }
 
     private void peekTask() {
         Task next = taskManager.peekNextTask();
         if (next == null) {
-            System.out.println("No pending tasks.");
+            printWarning("No pending tasks.");
         } else {
-            System.out.println("Next task to serve: " + next);
+            printInfo("Next task to serve: " + next);
         }
     }
 
     private void serveTask() {
         Task served = taskManager.serveNextTask();
         if (served == null) {
-            System.out.println("No tasks to serve.");
+            printWarning("No tasks to serve.");
         } else {
-            System.out.println("Serving task: " + served);
+            printSuccess("Serving task: " + served);
             undoService.record(Action.taskAction(ActionType.SERVE_TASK, served, "Served task " + served.getTaskId()));
         }
     }
@@ -316,33 +341,41 @@ public class CTWMSApplication {
     private void displayTasks() {
         List<Task> tasks = taskManager.listPendingTasks();
         if (tasks.isEmpty()) {
-            System.out.println("Task queue is empty.");
+            printWarning("Task queue is empty.");
             return;
         }
-        System.out.println("\n-- Pending Tasks --");
+        printSubHeading(String.format("Pending Tasks (%d)", tasks.size()));
+        System.out.printf("%-8s %-15s %-30s %-8s %-16s%n", "ID", "Requestor", "Description", "Priority", "Created");
+        System.out.println(SECONDARY_DIVIDER);
         for (Task task : tasks) {
-            System.out.println(task);
+            System.out.printf("%-8s %-15s %-30s %-8s %-16s%n",
+                    task.getTaskId(),
+                    truncate(task.getRequestor(), 15),
+                    truncate(task.getDescription(), 30),
+                    task.getPriority(),
+                    task.getCreatedAt().format(TASK_TIME_FORMATTER));
         }
+        System.out.println(SECONDARY_DIVIDER);
     }
 
     private void undoMenu() {
         boolean back = false;
         while (!back) {
-            System.out.println("\n--- Undo System ---");
-            System.out.println("1. Undo Last Action");
-            System.out.println("2. Show Undo History");
-            System.out.println("3. Clear Undo History");
-            System.out.println("0. Back to Main Menu");
-            int choice = readInt("Choose an option: ");
+            printMenu("Undo System",
+                    "1) Undo Last Action",
+                    "2) Show Undo History",
+                    "3) Clear Undo History",
+                    "0) Back to Main Menu");
+            int choice = readMenuChoice("Choose an option: ", 0, 3);
             switch (choice) {
                 case 1 -> undoLastAction();
                 case 2 -> showUndoHistory();
                 case 3 -> {
                     undoService.clear();
-                    System.out.println("Undo history cleared.");
+                    printInfo("Undo history cleared.");
                 }
                 case 0 -> back = true;
-                default -> System.out.println("Invalid choice.");
+                default -> printWarning("Invalid choice.");
             }
         }
     }
@@ -350,40 +383,51 @@ public class CTWMSApplication {
     private void undoLastAction() {
         boolean success = undoService.undoLast(personnelManager, taskManager, serviceCatalog);
         if (success) {
-            System.out.println("Last action undone successfully.");
+            printSuccess("Last action undone successfully.");
         } else {
-            System.out.println("No actions available to undo.");
+            printWarning("No actions available to undo.");
         }
     }
 
     private void showUndoHistory() {
         List<Action> history = undoService.history();
         if (history.isEmpty()) {
-            System.out.println("Undo stack is empty.");
+            printWarning("Undo stack is empty.");
             return;
         }
-        System.out.println("\n-- Undo History (most recent first) --");
+        printSubHeading(String.format("Undo History (most recent first) [%d]", history.size()));
         for (int i = 0; i < history.size(); i++) {
             System.out.printf("%d. %s%n", i + 1, history.get(i));
         }
     }
 
     private void showSummary() {
-        System.out.println("\n=== System Summary ===");
-        System.out.printf("Personnel count: %d%n", personnelManager.count());
-        System.out.printf("Service catalog size: %d%n", serviceCatalog.count());
-        System.out.printf("Pending tasks: %d%n", taskManager.count());
+        printBanner("System Summary");
+        System.out.printf("%-25s : %d%n", "Personnel count", personnelManager.count());
+        System.out.printf("%-25s : %d%n", "Service catalog size", serviceCatalog.count());
+        System.out.printf("%-25s : %d%n", "Pending tasks", taskManager.count());
         Task nextTask = taskManager.peekNextTask();
         if (nextTask != null) {
-            System.out.println("Next task in queue: " + nextTask);
+            printInfo("Next task in queue: " + nextTask);
         } else {
-            System.out.println("No pending tasks at the moment.");
+            printWarning("No pending tasks at the moment.");
         }
         List<Action> history = undoService.history();
         if (!history.isEmpty()) {
-            System.out.println("Last undoable action: " + history.get(0));
+            printInfo("Last undoable action: " + history.get(0));
         } else {
-            System.out.println("Undo stack is currently empty.");
+            printWarning("Undo stack is currently empty.");
+        }
+    }
+
+    private int readMenuChoice(String prompt, int min, int max) {
+        while (true) {
+            int value = readInt(prompt);
+            if (value < min || value > max) {
+                printWarning(String.format("Please choose a number between %d and %d.", min, max));
+            } else {
+                return value;
+            }
         }
     }
 
@@ -394,7 +438,7 @@ public class CTWMSApplication {
             try {
                 return Integer.parseInt(input.trim());
             } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid integer.");
+                printWarning("Please enter a valid integer.");
             }
         }
     }
@@ -405,9 +449,17 @@ public class CTWMSApplication {
     }
 
     private boolean readBoolean(String prompt) {
-        System.out.print(prompt);
-        String input = scanner.nextLine().trim();
-        return input.equalsIgnoreCase("y") || input.equalsIgnoreCase("yes") || input.equalsIgnoreCase("active");
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            if (input.equalsIgnoreCase("y") || input.equalsIgnoreCase("yes") || input.equalsIgnoreCase("active")) {
+                return true;
+            }
+            if (input.equalsIgnoreCase("n") || input.equalsIgnoreCase("no") || input.equalsIgnoreCase("inactive")) {
+                return false;
+            }
+            printWarning("Please enter 'y' or 'n'.");
+        }
     }
 
     private int parseOrDefault(String input, int defaultValue) {
@@ -416,5 +468,59 @@ public class CTWMSApplication {
         } catch (NumberFormatException e) {
             return defaultValue;
         }
+    }
+
+    private void printMenu(String title, String... options) {
+        printBanner(title);
+        for (String option : options) {
+            System.out.printf("  %s%n", option);
+        }
+        System.out.println(SECONDARY_DIVIDER);
+    }
+
+    private void printBanner(String title) {
+        System.out.println("\n" + PRIMARY_DIVIDER);
+        System.out.println(centerText(title, PRIMARY_DIVIDER.length()));
+        System.out.println(PRIMARY_DIVIDER);
+    }
+
+    private void printSubHeading(String title) {
+        System.out.println("\n" + title);
+        System.out.println(SECONDARY_DIVIDER);
+    }
+
+    private void printInfo(String message) {
+        System.out.println("[i] " + message);
+    }
+
+    private void printSuccess(String message) {
+        System.out.println("[OK] " + message);
+    }
+
+    private void printWarning(String message) {
+        System.out.println("[!] " + message);
+    }
+
+    private String truncate(String text, int maxLength) {
+        if (text == null) {
+            return "";
+        }
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, Math.max(0, maxLength - 3)) + "...";
+    }
+
+    private String centerText(String text, int width) {
+        if (text == null) {
+            text = "";
+        }
+        if (text.length() >= width) {
+            return text;
+        }
+        int padding = (width - text.length()) / 2;
+        String left = " ".repeat(padding);
+        String right = " ".repeat(width - text.length() - padding);
+        return left + text + right;
     }
 }
