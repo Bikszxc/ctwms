@@ -37,6 +37,13 @@ public class CTWMSApplication {
         new CTWMSApplication().run();
     }
 
+    /**
+     * Allows external launchers (such as CTWMSTui) to reuse the same workflow.
+     */
+    public void start() {
+        run();
+    }
+
     private void run() {
         boolean exit = false;
         while (!exit) {
@@ -159,6 +166,7 @@ public class CTWMSApplication {
                     truncate(person.getEmail(), 25));
         }
         System.out.println(SECONDARY_DIVIDER);
+        waitForEnter();
     }
 
     private void manageServicesMenu() {
@@ -283,6 +291,7 @@ public class CTWMSApplication {
                     truncate(service.getDescription(), 30));
         }
         System.out.println(SECONDARY_DIVIDER);
+        waitForEnter();
     }
 
     private void manageTasksMenu() {
@@ -356,6 +365,7 @@ public class CTWMSApplication {
                     task.getCreatedAt().format(TASK_TIME_FORMATTER));
         }
         System.out.println(SECONDARY_DIVIDER);
+        waitForEnter();
     }
 
     private void undoMenu() {
@@ -399,6 +409,7 @@ public class CTWMSApplication {
         for (int i = 0; i < history.size(); i++) {
             System.out.printf("%d. %s%n", i + 1, history.get(i));
         }
+        waitForEnter();
     }
 
     private void showSummary() {
@@ -418,6 +429,7 @@ public class CTWMSApplication {
         } else {
             printWarning("Undo stack is currently empty.");
         }
+        waitForEnter("Press Enter to return to the main menu...");
     }
 
     private int readMenuChoice(String prompt, int min, int max) {
@@ -499,6 +511,15 @@ public class CTWMSApplication {
 
     private void printWarning(String message) {
         System.out.println("[!] " + message);
+    }
+
+    private void waitForEnter() {
+        waitForEnter("Press Enter to return to the previous menu...");
+    }
+
+    private void waitForEnter(String prompt) {
+        System.out.print("\n" + prompt);
+        scanner.nextLine();
     }
 
     private String truncate(String text, int maxLength) {
