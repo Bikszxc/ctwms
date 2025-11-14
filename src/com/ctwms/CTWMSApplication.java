@@ -181,6 +181,8 @@ public class CTWMSApplication {
         boolean active = readBoolean("Is the service active? (y/n): ");
         Service service = new Service(name, description, category, active);
         serviceCatalog.addService(service);
+        undoService.record(Action.serviceAction(ActionType.ADD_SERVICE, null, service,
+                serviceCatalog.count() - 1, "Added service " + name));
         System.out.println("Service added to catalog.");
     }
 
@@ -215,7 +217,8 @@ public class CTWMSApplication {
         }
         Service after = existing.clone();
         serviceCatalog.replaceService(after.getName(), after);
-        undoService.record(Action.serviceAction(before, after, "Edited service " + before.getName()));
+        undoService.record(Action.serviceAction(ActionType.EDIT_SERVICE, before, after, -1,
+                "Edited service " + before.getName()));
         System.out.println("Service updated.");
     }
 
@@ -225,8 +228,11 @@ public class CTWMSApplication {
             return;
         }
         String name = readLine("Enter the service name to remove: ");
+        int index = serviceCatalog.indexOf(name);
         Service removed = serviceCatalog.removeService(name);
         if (removed != null) {
+            undoService.record(Action.serviceAction(ActionType.REMOVE_SERVICE, removed, null,
+                    index, "Removed service " + name));
             System.out.println("Service removed from catalog.");
         } else {
             System.out.println("Service not located.");

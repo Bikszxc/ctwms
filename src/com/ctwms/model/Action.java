@@ -37,13 +37,13 @@ public class Action {
         return new Action(type, null, null, null, task != null ? task.clone() : null, -1, description);
     }
 
-    public static Action serviceAction(Service before, Service after, String description) {
-        return new Action(ActionType.EDIT_SERVICE,
+    public static Action serviceAction(ActionType type, Service before, Service after, int positionIndex, String description) {
+        return new Action(type,
                 null,
                 before != null ? before.clone() : null,
                 after != null ? after.clone() : null,
                 null,
-                -1,
+                positionIndex,
                 description);
     }
 

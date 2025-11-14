@@ -31,6 +31,8 @@ public class UndoService {
             case REMOVE_PERSONNEL -> revertRemovePersonnel(personnelManager, action.getPersonnelSnapshot(), action.getPositionIndex());
             case ADD_TASK -> revertAddTask(taskManager, action.getTaskSnapshot());
             case SERVE_TASK -> revertServeTask(taskManager, action.getTaskSnapshot());
+            case ADD_SERVICE -> revertAddService(serviceCatalog, action.getServiceAfter());
+            case REMOVE_SERVICE -> revertRemoveService(serviceCatalog, action.getServiceBefore(), action.getPositionIndex());
             case EDIT_SERVICE -> revertEditService(serviceCatalog, action.getServiceBefore(), action.getServiceAfter());
             default -> {
                 return false;
@@ -77,6 +79,20 @@ public class UndoService {
             return;
         }
         manager.requeueAtFront(task);
+    }
+
+    private void revertAddService(ServiceCatalog catalog, Service service) {
+        if (service == null) {
+            return;
+        }
+        catalog.removeService(service.getName());
+    }
+
+    private void revertRemoveService(ServiceCatalog catalog, Service service, int index) {
+        if (service == null) {
+            return;
+        }
+        catalog.insertService(service.clone(), index);
     }
 
     private void revertEditService(ServiceCatalog catalog, Service previous, Service current) {

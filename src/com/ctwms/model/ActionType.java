@@ -8,5 +8,7 @@ public enum ActionType {
     REMOVE_PERSONNEL,
     ADD_TASK,
     SERVE_TASK,
+    ADD_SERVICE,
+    REMOVE_SERVICE,
     EDIT_SERVICE;
 }

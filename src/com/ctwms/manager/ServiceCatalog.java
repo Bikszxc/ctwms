@@ -17,6 +17,17 @@ public class ServiceCatalog {
         services.add(service);
     }
 
+    public void insertService(Service service, int index) {
+        if (service == null) {
+            return;
+        }
+        if (index < 0 || index > services.size()) {
+            services.add(service);
+        } else {
+            services.add(index, service);
+        }
+    }
+
     public Service removeService(String name) {
         int index = findIndexByName(name);
         if (index >= 0) {
@@ -66,6 +77,10 @@ public class ServiceCatalog {
 
     public int count() {
         return services.size();
+    }
+
+    public int indexOf(String name) {
+        return findIndexByName(name);
     }
 
     private int findIndexByName(String name) {
