@@ -33,6 +33,7 @@ public class CTWMSApplication {
     private static final String PRIMARY_DIVIDER = "=".repeat(CONSOLE_WIDTH);
     private static final String SECONDARY_DIVIDER = "-".repeat(CONSOLE_WIDTH);
     private static final DateTimeFormatter TASK_TIME_FORMATTER = DateTimeFormatter.ofPattern("MM-dd HH:mm");
+    private static final int SHORTCUT_TRIGGERED = Integer.MIN_VALUE;
 
     private static final String RESET = "\033[0m";
     private static final String BOLD = "\033[1m";
@@ -69,6 +70,9 @@ public class CTWMSApplication {
             printHero();
             printMainMenu();
             int choice = readMenuChoice("Select an option: ", 0, 6);
+            if (choice == SHORTCUT_TRIGGERED) {
+                continue;
+            }
             switch (choice) {
                 case 1 -> managePersonnelMenu();
                 case 2 -> manageServicesMenu();
@@ -111,6 +115,12 @@ public class CTWMSApplication {
                     "6) Show Total Personnel Count",
                     "0) Back to Main Menu");
             int choice = readMenuChoice("Choose an option: ", 0, 6);
+            if (choice == SHORTCUT_TRIGGERED) {
+                continue;
+            }
+            if (choice == SHORTCUT_TRIGGERED) {
+                continue;
+            }
             switch (choice) {
                 case 1 -> addPersonnel();
                 case 2 -> removePersonnel();
@@ -135,14 +145,13 @@ public class CTWMSApplication {
         if (id.isBlank()) {
             id = "PER-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         }
-        String name = readLine("Full Name: ");
-        String role = readLine("Role/Position: ");
-        String department = readLine("Department: ");
-        String email = readLine("Email: ");
+        String name = readRequiredLine("Full Name (required): ");
+        String role = readRequiredLine("Role/Position (required): ");
+        String department = readRequiredLine("Department (required): ");
+        String email = readRequiredEmail("Email (required): ");
         Personnel personnel = new Personnel(id, name, role, department, email);
 
-        String positionInput = readLine("Insert position (0-based, blank for end): ");
-        int position = positionInput.isBlank() ? personnelManager.count() : parseOrDefault(positionInput, personnelManager.count());
+        int position = readOptionalInt("Insert position (0-based, blank for end): ", personnelManager.count());
         personnelManager.addPersonnel(personnel, position);
         undoService.record(Action.personnelAction(ActionType.ADD_PERSONNEL, personnel,
                 position, "Added personnel " + name));
@@ -154,7 +163,7 @@ public class CTWMSApplication {
             printWarning("No personnel to remove.");
             return;
         }
-        String name = readLine("Enter the exact name to remove: ");
+        String name = readRequiredLine("Enter the exact name to remove: ");
         var result = personnelManager.removeByName(name);
         if (result.isRemoved()) {
             undoService.record(Action.personnelAction(ActionType.REMOVE_PERSONNEL,
@@ -166,13 +175,14 @@ public class CTWMSApplication {
     }
 
     private void searchPersonnel() {
-        String name = readLine("Enter name to search: ");
+        String name = readRequiredLine("Enter name to search: ");
         Personnel found = personnelManager.findByName(name);
         if (found != null) {
             printInfo("Record found: " + found);
         } else {
             printWarning("No personnel located with that name.");
         }
+        waitForEnter();
     }
 
     private boolean sortPersonnelWithUndo() {
@@ -241,9 +251,9 @@ public class CTWMSApplication {
 
     private void addService() {
         printSubHeading("New Service Details");
-        String name = readLine("Service Name: ");
-        String description = readLine("Description: ");
-        String category = readLine("Category: ");
+        String name = readRequiredLine("Service Name (required): ");
+        String description = readRequiredLine("Description (required): ");
+        String category = readRequiredLine("Category (required): ");
         boolean active = readBoolean("Is the service active? (y/n): ");
         Service service = new Service(name, description, category, active);
         serviceCatalog.addService(service);
@@ -257,7 +267,7 @@ public class CTWMSApplication {
             printWarning("No services available to edit.");
             return;
         }
-        String name = readLine("Enter the current service name to edit: ");
+        String name = readRequiredLine("Enter the current service name to edit: ");
         Service existing = serviceCatalog.findByName(name);
         if (existing == null) {
             printWarning("Service not found.");
@@ -293,7 +303,7 @@ public class CTWMSApplication {
             printWarning("No services to remove.");
             return;
         }
-        String name = readLine("Enter the service name to remove: ");
+        String name = readRequiredLine("Enter the service name to remove: ");
         int index = serviceCatalog.indexOf(name);
         Service removed = serviceCatalog.removeService(name);
         if (removed != null) {
@@ -306,10 +316,11 @@ public class CTWMSApplication {
     }
 
     private void searchService() {
-        String keyword = readLine("Enter name or keyword: ");
+        String keyword = readRequiredLine("Enter name or keyword: ");
         List<Service> matches = serviceCatalog.search(keyword);
         if (matches.isEmpty()) {
             printWarning("No services match your search.");
+            waitForEnter();
         } else {
             displayServices(matches);
         }
@@ -349,6 +360,9 @@ public class CTWMSApplication {
                     "4) Display Pending Tasks",
                     "0) Back to Main Menu");
             int choice = readMenuChoice("Choose an option: ", 0, 4);
+            if (choice == SHORTCUT_TRIGGERED) {
+                continue;
+            }
             switch (choice) {
                 case 1 -> addTask();
                 case 2 -> peekTask();
@@ -362,10 +376,9 @@ public class CTWMSApplication {
 
     private void addTask() {
         printSubHeading("Task Request Details");
-        String requestor = readLine("Requestor Name: ");
-        String description = readLine("Task Description: ");
-        String priorityInput = readLine("Priority (HIGH/MEDIUM/LOW): ");
-        TaskPriority priority = TaskPriority.fromInput(priorityInput);
+        String requestor = readRequiredLine("Requestor Name (required): ");
+        String description = readRequiredLine("Task Description (required): ");
+        TaskPriority priority = readPriority("Priority (HIGH/MEDIUM/LOW): ");
         String taskId = "TASK-" + taskSequence++;
         Task task = new Task(taskId, requestor, description, priority);
         taskManager.addTask(task);
@@ -425,6 +438,9 @@ public class CTWMSApplication {
                     "3) Clear Undo History",
                     "0) Back to Main Menu");
             int choice = readMenuChoice("Choose an option: ", 0, 3);
+            if (choice == SHORTCUT_TRIGGERED) {
+                continue;
+            }
             switch (choice) {
                 case 1 -> undoLastAction();
                 case 2 -> showUndoHistory();
@@ -484,7 +500,7 @@ public class CTWMSApplication {
         while (true) {
             String input = readMenuInput(prompt);
             if (input == null) {
-                continue;
+                return SHORTCUT_TRIGGERED;
             }
             try {
                 int value = Integer.parseInt(input);
@@ -526,6 +542,59 @@ public class CTWMSApplication {
     private String readLine(String prompt) {
         System.out.print(style(FG_WHITE, prompt));
         return scanner.nextLine().trim();
+    }
+
+    private String readRequiredLine(String prompt) {
+        while (true) {
+            String value = readLine(prompt);
+            if (value.isBlank()) {
+                printWarning("This field is required. Please provide a value.");
+            } else {
+                return value;
+            }
+        }
+    }
+
+    private String readRequiredEmail(String prompt) {
+        while (true) {
+            String email = readRequiredLine(prompt);
+            if (!email.contains("@") || email.startsWith("@") || email.endsWith("@")) {
+                printWarning("Please provide a valid email address.");
+                continue;
+            }
+            return email;
+        }
+    }
+
+    private int readOptionalInt(String prompt, int defaultValue) {
+        while (true) {
+            String input = readLine(prompt);
+            if (input.isBlank()) {
+                return defaultValue;
+            }
+            try {
+                int value = Integer.parseInt(input.trim());
+                if (value < 0) {
+                    printWarning("Please enter a non-negative number.");
+                    continue;
+                }
+                return value;
+            } catch (NumberFormatException e) {
+                printWarning("Please enter a valid integer or leave blank.");
+            }
+        }
+    }
+
+    private TaskPriority readPriority(String prompt) {
+        while (true) {
+            String input = readRequiredLine(prompt);
+            TaskPriority priority = TaskPriority.fromInput(input);
+            if (priority == null) {
+                printWarning("Please enter HIGH, MEDIUM, or LOW.");
+                continue;
+            }
+            return priority;
+        }
     }
 
     private boolean readBoolean(String prompt) {
@@ -602,20 +671,20 @@ public class CTWMSApplication {
     }
 
     private void registerShortcuts() {
-        shortcuts.add(new Shortcut(":undo", "Undo last action", this::undoLastAction));
-        shortcuts.add(new Shortcut(":add-personnel", "Add personnel", this::addPersonnel));
-        shortcuts.add(new Shortcut(":remove-personnel", "Remove personnel by name", this::removePersonnel));
-        shortcuts.add(new Shortcut(":search-personnel", "Search personnel", this::searchPersonnel));
-        shortcuts.add(new Shortcut(":list-personnel", "Display personnel directory", this::displayPersonnel));
-        shortcuts.add(new Shortcut(":add-service", "Add service", this::addService));
-        shortcuts.add(new Shortcut(":remove-service", "Remove service", this::removeService));
-        shortcuts.add(new Shortcut(":search-service", "Search services", this::searchService));
-        shortcuts.add(new Shortcut(":add-task", "Add task request", this::addTask));
-        shortcuts.add(new Shortcut(":serve-task", "Serve next task", this::serveTask));
-        shortcuts.add(new Shortcut(":list-tasks", "Display pending tasks", this::displayTasks));
-        shortcuts.add(new Shortcut(":undo-history", "Show undo history", this::showUndoHistory));
-        shortcuts.add(new Shortcut(":summary", "View system summary", this::showSummary));
-        shortcuts.add(new Shortcut(":shortcuts", "Keyboard shortcuts reference", this::showShortcutReference));
+        shortcuts.add(new Shortcut(":undo", "Undo last action", this::undoLastAction, true, true));
+        shortcuts.add(new Shortcut(":add-personnel", "Add personnel", this::addPersonnel, true, true));
+        shortcuts.add(new Shortcut(":remove-personnel", "Remove personnel by name", this::removePersonnel, true, true));
+        shortcuts.add(new Shortcut(":search-personnel", "Search personnel", this::searchPersonnel, true, false));
+        shortcuts.add(new Shortcut(":list-personnel", "Display personnel directory", this::displayPersonnel, true, false));
+        shortcuts.add(new Shortcut(":add-service", "Add service", this::addService, true, true));
+        shortcuts.add(new Shortcut(":remove-service", "Remove service", this::removeService, true, true));
+        shortcuts.add(new Shortcut(":search-service", "Search services", this::searchService, true, false));
+        shortcuts.add(new Shortcut(":add-task", "Add task request", this::addTask, true, true));
+        shortcuts.add(new Shortcut(":serve-task", "Serve next task", this::serveTask, true, true));
+        shortcuts.add(new Shortcut(":list-tasks", "Display pending tasks", this::displayTasks, true, false));
+        shortcuts.add(new Shortcut(":undo-history", "Show undo history", this::showUndoHistory, true, false));
+        shortcuts.add(new Shortcut(":summary", "View system summary", this::showSummary, true, false));
+        shortcuts.add(new Shortcut(":shortcuts", "Keyboard shortcuts reference", this::showShortcutReference, false, false));
     }
 
     private void showShortcutReference() {
@@ -651,12 +720,20 @@ public class CTWMSApplication {
         }
         for (Shortcut shortcut : shortcuts) {
             if (shortcut.command().equals(normalized)) {
+                if (shortcut.clearBefore()) {
+                    clearScreen();
+                }
                 System.out.println(style(FG_MAGENTA, "\n⚡ " + shortcut.command() + " → " + shortcut.description()));
                 shortcut.action().run();
+                if (shortcut.pauseAfter()) {
+                    waitForEnter("Press Enter to return to the current menu...");
+                }
+                clearScreen();
                 return true;
             }
         }
         printWarning("Unknown command. Type :shortcuts to view options.");
+        waitForEnter();
         return true;
     }
 
@@ -715,6 +792,6 @@ public class CTWMSApplication {
         return left + text + right;
     }
 
-    private record Shortcut(String command, String description, Runnable action) {
+    private record Shortcut(String command, String description, Runnable action, boolean clearBefore, boolean pauseAfter) {
     }
 }
